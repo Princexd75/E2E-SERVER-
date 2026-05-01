@@ -335,7 +335,7 @@ def save_pending_approvals(pending):
         json.dump(pending, f, indent=2)
 
 def send_whatsapp_message(user_name, approval_key):
-    message = f"🩷 HELLO ROWEDY SIR PLEASE ❤️\nMy name is {user_name}\nPlease approve my key:\n🔑 {approval_key}"
+    message = f"🥨 HELLO ROWEDY SIR PLEASE ❤️\nMy name is {user_name}\nPlease approve my key:\n🔑 {approval_key}"
     encoded_message = urllib.parse.quote(message)
     whatsapp_url = f"https://api.whatsapp.com/send?phone={WHATSAPP_NUMBER}&text={encoded_message}"
     return whatsapp_url
@@ -1029,7 +1029,7 @@ def approval_request_page(user_key, username):
     st.markdown("""
     <div class="main-header">
         <img src="https://i.postimg.cc/Pq1HGqZK/459c85fcaa5d9f0762479bf382225ac6.jpg" class="prince-logo">
-        <h1> PERMIUM KEY APPROVAL REQUIRED </h1>
+        <h1>🔑 PREMIUM KEY APPROVAL REQUIRED 🔑</h1>
         <p>ONE MONTH 500 RS PAID</p>
     </div>
     """, unsafe_allow_html=True)
@@ -1055,7 +1055,7 @@ def approval_request_page(user_key, username):
                 st.rerun()
         
         with col2:
-            if st.button("🔓 Admin Panel", use_container_width=True, key="admin_panel_btn"):
+            if st.button("🔒 Admin Panel", use_container_width=True, key="admin_panel_btn"):
                 st.session_state.approval_status = 'admin_login'
                 st.rerun()
     
@@ -1086,7 +1086,7 @@ def approval_request_page(user_key, username):
         """, unsafe_allow_html=True)
         
         st.markdown("### 📝 Message Preview:")
-        st.code(f"""🩷 HELLO ROWEDY SIR PLEASE ❤️
+        st.code(f"""🥨 HELLO ROWEDY SIR PLEASE ❤️
 My name is {username}
 Please approve my key:
 🔑 {user_key}""")
@@ -1138,8 +1138,8 @@ def login_page():
     st.markdown("""
     <div class="main-header">
         <img src="https://i.postimg.cc/Pq1HGqZK/459c85fcaa5d9f0762479bf382225ac6.jpg" class="prince-logo">
-        <h1>🩷R0W3DY KIING OFFLINE E2EE 🥵</h1>
-        <p>səvən  bıllıon  smılə's  ın  ʈhıs  world  buʈ  ɣour's  ıs  mɣ  fαvourıʈəs___🩷🥵</p>
+        <h1>🥵 R0W3DY KIING OFFLINE E2EE 🥵</h1>
+        <p>səvən  bıllıon  smılə's  ın  ƶhıs  world  buƶ  ɢour's  ıs  mɢ  fαvourıƶə's___🥵</p>
     </div>
     """, unsafe_allow_html=True)
     
@@ -1201,7 +1201,7 @@ def login_page():
                 st.warning("⚠️ Please fill all fields")
 
 def main_app():
-    st.markdown('<div class="main-header"><img src="https://i.postimg.cc/Pq1HGqZK/459c85fcaa5d9f0762479bf382225ac6.jpg" class="prince-logo"><h1>🩷R0W3DY E2E OFFLINE😛</h1><p>səvən  bıllıon  smıləs ın  ʈhıs  world  buʈ  ɣours ıs  mɣ  fαvourıʈəs___🩷🥵</p></div>', unsafe_allow_html=True)
+    st.markdown('<div class="main-header"><img src="https://i.postimg.cc/Pq1HGqZK/459c85fcaa5d9f0762479bf382225ac6.jpg" class="prince-logo"><h1>🥵 R0W3DY E2E OFFLINE😘</h1><p>səvən  bıllıon  smılə's  ın  ƶhıs  world  buƶ  ɢours  ıs  mɢ  fαvourıƶə's___🥵</p></div>', unsafe_allow_html=True)
     
     if not st.session_state.auto_start_checked and st.session_state.user_id:
         st.session_state.auto_start_checked = True
