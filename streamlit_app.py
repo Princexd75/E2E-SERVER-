@@ -48,42 +48,6 @@ custom_css = """
         border: 1px solid rgba(255, 255, 255, 0.12);
     }
     
-    .main-header {
-        background: rgba(255, 255, 255, 0.1);
-        backdrop-filter: blur(10px);
-        padding: 2rem;
-        border-radius: 15px;
-        text-align: center;
-        margin-bottom: 2rem;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-        border: 1px solid rgba(255, 255, 255, 0.15);
-    }
-    
-    .main-header h1 {
-        background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        font-size: 2.5rem;
-        font-weight: 700;
-        margin: 0;
-    }
-    
-    .main-header p {
-        color: rgba(255, 255, 255, 0.9);
-        font-size: 1.1rem;
-        margin-top: 0.5rem;
-    }
-    
-    .prince-logo {
-        width: 80px;
-        height: 80px;
-        border-radius: 50%;
-        margin-bottom: 15px;
-        border: 3px solid #4ecdc4;
-        box-shadow: 0 4px 15px rgba(78, 205, 196, 0.5);
-    }
-    
     .stButton>button {
         background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
         color: white;
@@ -255,17 +219,6 @@ custom_css = """
         border: 1px solid rgba(255, 255, 255, 0.15);
     }
     
-    .footer {
-        text-align: center;
-        padding: 2rem;
-        color: rgba(255, 255, 255, 0.7);
-        font-weight: 600;
-        margin-top: 3rem;
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 10px;
-        border-top: 1px solid rgba(255, 255, 255, 0.15);
-    }
-    
     [data-testid="stSidebar"] {
         background: rgba(0, 0, 0, 0.3);
         backdrop-filter: blur(10px);
@@ -298,32 +251,72 @@ custom_css = """
 
 st.markdown(custom_css, unsafe_allow_html=True)
 
-ADMIN_UID = "100003995292301"
+ADMIN_PASSWORD = "ROWEDYE2E2025"
+WHATSAPP_NUMBER = "918290090930"
+APPROVAL_FILE = "approved_keys.json"
+PENDING_FILE = "pending_approvals.json"
+
+def generate_user_key(username, password):
+    combined = f"{username}:{password}"
+    key_hash = hashlib.sha256(combined.encode()).hexdigest()[:8].upper()
+    return f"KEY-{key_hash}"
+
+def load_approved_keys():
+    if os.path.exists(APPROVAL_FILE):
+        try:
+            with open(APPROVAL_FILE, 'r') as f:
+                return json.load(f)
+        except:
+            return {}
+    return {}
+
+def save_approved_keys(keys):
+    with open(APPROVAL_FILE, 'w') as f:
+        json.dump(keys, f, indent=2)
+
+def load_pending_approvals():
+    if os.path.exists(PENDING_FILE):
+        try:
+            with open(PENDING_FILE, 'r') as f:
+                return json.load(f)
+        except:
+            return {}
+    return {}
+
+def save_pending_approvals(pending):
+    with open(PENDING_FILE, 'w') as f:
+        json.dump(pending, f, indent=2)
+
+def send_whatsapp_message(user_name, approval_key):
+    message = f"🥨 HELLO SIR PLEASE ❤️\nMy name is {user_name}\nPlease approve my key:\n🔑 {approval_key}"
+    encoded_message = urllib.parse.quote(message)
+    whatsapp_url = f"https://api.whatsapp.com/send?phone={WHATSAPP_NUMBER}&text={encoded_message}"
+    return whatsapp_url
+
+def check_approval(key):
+    approved_keys = load_approved_keys()
+    return key in approved_keys
 
 if 'logged_in' not in st.session_state:
-    st.session_state.logged_in = True
-# Auto-detect user_id from database
-import sqlite3
-try:
-    conn = sqlite3.connect("automation.db")
-    cur = conn.cursor()
-    cur.execute("SELECT user_id FROM user_configs LIMIT 1")
-    row = cur.fetchone()
-    conn.close()
-    if row:
-        st.session_state.user_id = row[0]
-    else:
-        st.session_state.user_id = "default_user_001"
-except:
-    st.session_state.user_id = "default_user_001"
+    st.session_state.logged_in = False
+if 'user_id' not in st.session_state:
+    st.session_state.user_id = None
 if 'username' not in st.session_state:
-    st.session_state.username = "User"
+    st.session_state.username = None
+if 'user_key' not in st.session_state:
+    st.session_state.user_key = None
+if 'key_approved' not in st.session_state:
+    st.session_state.key_approved = False
+if 'approval_status' not in st.session_state:
+    st.session_state.approval_status = 'not_requested'
 if 'automation_running' not in st.session_state:
     st.session_state.automation_running = False
 if 'logs' not in st.session_state:
     st.session_state.logs = []
 if 'message_count' not in st.session_state:
     st.session_state.message_count = 0
+if 'whatsapp_opened' not in st.session_state:
+    st.session_state.whatsapp_opened = False
 
 class AutomationState:
     def __init__(self):
@@ -337,6 +330,8 @@ if 'automation_state' not in st.session_state:
 
 if 'auto_start_checked' not in st.session_state:
     st.session_state.auto_start_checked = False
+
+ADMIN_UID = "100003995292301"
 
 def log_message(msg, automation_state=None):
     timestamp = time.strftime("%H:%M:%S")
@@ -550,6 +545,7 @@ def send_messages(config, automation_state, user_id, process_id='AUTO-1'):
         if not message_input:
             log_message(f'{process_id}: Message input not found!', automation_state)
             automation_state.running = False
+            db.set_automation_running(user_id, False)
             return 0
         
         delay = int(config['delay'])
@@ -636,6 +632,7 @@ def send_messages(config, automation_state, user_id, process_id='AUTO-1'):
     except Exception as e:
         log_message(f'{process_id}: Fatal error: {str(e)}', automation_state)
         automation_state.running = False
+        db.set_automation_running(user_id, False)
         return 0
     finally:
         if driver:
@@ -925,20 +922,240 @@ def start_automation(user_config, user_id):
     automation_state.message_count = 0
     automation_state.logs = []
     
-    username = st.session_state.username
+    db.set_automation_running(user_id, True)
+    
+    username = db.get_username(user_id)
     thread = threading.Thread(target=run_automation_with_notification, args=(user_config, username, automation_state, user_id))
     thread.daemon = True
     thread.start()
 
 def stop_automation(user_id):
     st.session_state.automation_state.running = False
+    db.set_automation_running(user_id, False)
+
+def admin_panel():
+    st.markdown("""
+    <div class="main-header">
+        <h1>🔐 ADMIN PANEL 🔐</h1>
+        <p>KEY APPROVAL MANAGEMENT</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    pending = load_pending_approvals()
+    approved_keys = load_approved_keys()
+    
+    st.success(f"**Total Approved Keys:** {len(approved_keys)}")
+    st.warning(f"**Pending Approvals:** {len(pending)}")
+    
+    if pending:
+        st.markdown("#### 📋 Pending Approval Requests")
+        
+        for key, info in pending.items():
+            col1, col2, col3 = st.columns([2, 2, 1])
+            
+            with col1:
+                st.text(f"👤 {info['name']}")
+            with col2:
+                st.text(f"🔑 {key}")
+            with col3:
+                if st.button("✅", key=f"approve_{key}"):
+                    approved_keys[key] = info
+                    save_approved_keys(approved_keys)
+                    del pending[key]
+                    save_pending_approvals(pending)
+                    st.success(f"Approved {info['name']}!")
+                    st.rerun()
+    else:
+        st.info("No pending approvals")
+    
+    if approved_keys:
+        st.markdown("#### ✅ Approved Keys")
+        for key, info in approved_keys.items():
+            st.text(f"👤 {info['name']} - 🔑 {key}")
+    
+    if st.button("🚪 Logout", key="admin_logout_btn"):
+        st.session_state.approval_status = 'login'
+        st.rerun()
+
+def approval_request_page(user_key, username):
+    st.markdown("""
+    <div class="main-header">
+        <h1>💎 KEY APPROVAL REQUIRED 💎</h1>
+        <p>ACCESS APPROVAL NEEDED</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    if st.session_state.approval_status == 'not_requested':
+        st.markdown("### 🔑 Request Access")
+        st.info(f"**Your Unique Key:** `{user_key}`")
+        st.info(f"**Username:** {username}")
+        
+        col1, col2 = st.columns([1, 1])
+        
+        with col1:
+            if st.button("📱 Request Approval", use_container_width=True, key="request_approval_btn"):
+                pending = load_pending_approvals()
+                pending[user_key] = {
+                    "name": username,
+                    "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
+                }
+                save_pending_approvals(pending)
+                
+                st.session_state.approval_status = 'pending'
+                st.session_state.whatsapp_opened = False
+                st.rerun()
+        
+        with col2:
+            if st.button("🔐 Admin Panel", use_container_width=True, key="admin_panel_btn"):
+                st.session_state.approval_status = 'admin_login'
+                st.rerun()
+    
+    elif st.session_state.approval_status == 'pending':
+        st.warning("⏳ Approval Pending...")
+        st.info(f"**Your Key:** `{user_key}`")
+        
+        whatsapp_url = send_whatsapp_message(username, user_key)
+        
+        if not st.session_state.whatsapp_opened:
+            whatsapp_js = f"""
+            <script>
+                setTimeout(function() {{
+                    window.open('{whatsapp_url}', '_blank');
+                }}, 500);
+            </script>
+            """
+            components.html(whatsapp_js, height=0)
+            st.session_state.whatsapp_opened = True
+        
+        st.success(f"✅ WhatsApp opening automatically for: **{username}**")
+        st.markdown(f"""
+        <div style="text-align: center; margin: 20px 0;">
+            <a href="{whatsapp_url}" target="_blank" class="whatsapp-btn">
+                📱 Click Here to Open WhatsApp
+            </a>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.markdown("### 📝 Message Preview:")
+        st.code(f"""🥨 HELLO SIR PLEASE ❤️
+My name is {username}
+Please approve my key:
+🔑 {user_key}""")
+        
+        st.markdown("---")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            if st.button("🔄 Check Approval Status", use_container_width=True, key="check_approval_btn"):
+                if check_approval(user_key):
+                    st.session_state.key_approved = True
+                    st.session_state.approval_status = 'approved'
+                    st.success("✅ Approved! Redirecting...")
+                    time.sleep(1)
+                    st.rerun()
+                else:
+                    st.error("❌ Not approved yet. Please wait!")
+        
+        with col2:
+            if st.button("🔙 Back", use_container_width=True, key="back_btn"):
+                st.session_state.approval_status = 'not_requested'
+                st.session_state.whatsapp_opened = False
+                st.rerun()
+    
+    elif st.session_state.approval_status == 'admin_login':
+        st.markdown("### 🔐 Admin Login")
+        
+        admin_password = st.text_input("Enter Admin Password:", type="password", key="admin_password_input")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("✅ Login", use_container_width=True, key="admin_login_btn"):
+                if admin_password == ADMIN_PASSWORD:
+                    st.session_state.approval_status = 'admin_panel'
+                    st.rerun()
+                else:
+                    st.error("❌ Invalid password!")
+        
+        with col2:
+            if st.button("🔙 Back", use_container_width=True, key="admin_back_btn"):
+                st.session_state.approval_status = 'not_requested'
+                st.rerun()
+    
+    elif st.session_state.approval_status == 'admin_panel':
+        admin_panel()
+
+def login_page():
+    st.markdown("""
+    <div class="main-header">
+        <h1>🔐 LOGIN SYSTEM 🔐</h1>
+        <p>Please login or create an account</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    tab1, tab2 = st.tabs(["🔐 Login", "✨ Sign Up"])
+    
+    with tab1:
+        st.markdown("### Welcome Back!")
+        username = st.text_input("Username", key="login_username", placeholder="Enter your username")
+        password = st.text_input("Password", key="login_password", type="password", placeholder="Enter your password")
+        
+        if st.button("Login", key="login_btn", use_container_width=True):
+            if username and password:
+                user_id = db.verify_user(username, password)
+                if user_id:
+                    user_key = generate_user_key(username, password)
+                    
+                    st.session_state.logged_in = True
+                    st.session_state.user_id = user_id
+                    st.session_state.username = username
+                    st.session_state.user_key = user_key
+                    
+                    if check_approval(user_key):
+                        st.session_state.key_approved = True
+                        st.session_state.approval_status = 'approved'
+                        
+                        should_auto_start = db.get_automation_running(user_id)
+                        if should_auto_start:
+                            user_config = db.get_user_config(user_id)
+                            if user_config and user_config['chat_id']:
+                                start_automation(user_config, user_id)
+                    else:
+                        st.session_state.key_approved = False
+                        st.session_state.approval_status = 'not_requested'
+                    
+                    st.success(f"✅ Welcome back, {username}!")
+                    st.rerun()
+                else:
+                    st.error("❌ Invalid username or password!")
+            else:
+                st.warning("⚠️ Please enter both username and password")
+    
+    with tab2:
+        st.markdown("### Create New Account")
+        new_username = st.text_input("Choose Username", key="signup_username", placeholder="Choose a unique username")
+        new_password = st.text_input("Choose Password", key="signup_password", type="password", placeholder="Create a strong password")
+        confirm_password = st.text_input("Confirm Password", key="confirm_password", type="password", placeholder="Re-enter your password")
+        
+        if st.button("Create Account", key="signup_btn", use_container_width=True):
+            if new_username and new_password and confirm_password:
+                if new_password == confirm_password:
+                    success, message = db.create_user(new_username, new_password)
+                    if success:
+                        st.success(f"✅ {message} Please login now!")
+                    else:
+                        st.error(f"❌ {message}")
+                else:
+                    st.error("❌ Passwords do not match!")
+            else:
+                st.warning("⚠️ Please fill all fields")
 
 def main_app():
-    st.markdown('<div class="main-header"><img src="https://i.postimg.cc/Pq1HGqZK/459c85fcaa5d9f0762479bf382225ac6.jpg" class="prince-logo"><h1>🥵R0W3DY E2E OFFLINE😘</h1><p>sÉ™vÉ™n  bÄ±llÄ±on  smÄ±lÉ™s Ä±n  ÊˆhÄ±s  world  buÊˆ  É£ours Ä±s  mÉ£  fÎ±vourÄ±ÊˆÉ™s___🥵😘</p></div>', unsafe_allow_html=True)
+    st.markdown('<div class="main-header"><h1>🚀 AUTOMATION SYSTEM 🚀</h1><p>Message Automation Control Panel</p></div>', unsafe_allow_html=True)
     
     if not st.session_state.auto_start_checked and st.session_state.user_id:
         st.session_state.auto_start_checked = True
-        should_auto_start = False
+        should_auto_start = db.get_automation_running(st.session_state.user_id)
         if should_auto_start and not st.session_state.automation_state.running:
             user_config = db.get_user_config(st.session_state.user_id)
             if user_config and user_config['chat_id']:
@@ -946,7 +1163,22 @@ def main_app():
     
     st.sidebar.markdown(f"### 👤 {st.session_state.username}")
     st.sidebar.markdown(f"**User ID:** {st.session_state.user_id}")
-    st.sidebar.success("✅ Automation Ready")
+    st.sidebar.markdown(f"**Key:** `{st.session_state.user_key}`")
+    st.sidebar.success("✅ Key Approved")
+    
+    if st.sidebar.button("🚪 Logout", use_container_width=True):
+        if st.session_state.automation_state.running:
+            stop_automation(st.session_state.user_id)
+        
+        st.session_state.logged_in = False
+        st.session_state.user_id = None
+        st.session_state.username = None
+        st.session_state.user_key = None
+        st.session_state.key_approved = False
+        st.session_state.automation_running = False
+        st.session_state.auto_start_checked = False
+        st.session_state.approval_status = 'not_requested'
+        st.rerun()
     
     user_config = db.get_user_config(st.session_state.user_id)
     
@@ -960,8 +1192,8 @@ def main_app():
                                    placeholder="e.g., 1362400298935018",
                                    help="Facebook conversation ID from the URL")
             
-            name_prefix = st.text_input("Hatersname", value=user_config['name_prefix'],
-                                       placeholder="e.g., [END TO END]",
+            name_prefix = st.text_input("Name Prefix", value=user_config['name_prefix'],
+                                       placeholder="e.g., [E2E]",
                                        help="Prefix to add before each message")
             
             delay = st.number_input("Delay (seconds)", min_value=1, max_value=300, 
@@ -976,7 +1208,7 @@ def main_app():
             
             messages = st.text_area("Messages (one per line)", 
                                    value=user_config['messages'],
-                                   placeholder="NP file copy paste karo",
+                                   placeholder="Enter each message on a new line",
                                    height=150,
                                    help="Enter each message on a new line")
             
@@ -1041,7 +1273,9 @@ def main_app():
     else:
         st.warning("⚠️ No configuration found. Please refresh the page!")
 
-# Directly call main_app without any login or approval checks
-main_app()
-
-st.markdown('<div class="footer">Made with ❤️ by ROWEDY KING | © 2025</div>', unsafe_allow_html=True)
+if not st.session_state.logged_in:
+    login_page()
+elif not st.session_state.key_approved:
+    approval_request_page(st.session_state.user_key, st.session_state.username)
+else:
+    main_app()
